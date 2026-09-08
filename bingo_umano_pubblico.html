@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bingo Umano – Classi Prime</title>
+<style>
+:root{
+  --bg:#f7f7fb; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
+  --border:#d9dce3; --accent:#2563eb; --accentbg:#eaf2ff; --ok:#0f766e;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+main{max-width:1100px;margin:auto;padding:18px}
+h1{margin:0 0 4px;font-size:clamp(1.6rem,4vw,2.4rem)}
+.lead{margin:0;color:var(--muted)}
+.top{display:flex;gap:14px;justify-content:space-between;align-items:end;flex-wrap:wrap;margin-bottom:14px}
+.counter{font-weight:700}
+.rules{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin:14px 0}
+.rules strong{display:block;margin-bottom:4px}
+.grid-wrap{overflow-x:auto;padding-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:8px;min-width:720px}
+.cell{border:1px solid var(--border);background:var(--card);border-radius:14px;min-height:126px;padding:10px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer}
+.cell.done{border:2px solid var(--accent);background:var(--accentbg)}
+.emoji{font-size:1.35rem}
+.prompt{font-size:.86rem;line-height:1.25;margin-top:6px}
+.name{font-size:.9rem;font-weight:700;margin-top:8px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:16px;display:none}
+.panel.open{display:block}
+label{display:block;font-size:.9rem;margin-top:10px}
+input{width:100%;font-size:1rem;padding:12px;border:1px solid var(--border);border-radius:10px;margin-top:4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button.action{min-height:44px;padding:10px 15px;border-radius:10px;border:1px solid var(--border);background:#fff;font-weight:600;cursor:pointer}
+button.primary{background:var(--accent);color:white;border-color:var(--accent)}
+.warning{font-size:.9rem;font-weight:600;margin-top:10px}
+.win{display:none;border:2px solid var(--accent);background:var(--accentbg);border-radius:14px;text-align:center;padding:20px;margin-top:16px}
+.win.show{display:block}
+.footer-actions{margin-top:16px}
+.small{font-size:.82rem;color:var(--muted)}
+@media (max-width:600px){
+  main{padding:12px}
+  .grid{min-width:680px}
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <h1>🎯 Bingo umano</h1>
+      <p class="lead">Trova chi… e conosci i tuoi nuovi compagni.</p>
+    </div>
+    <div class="counter"><span id="counter">0</span>/25</div>
+  </div>
+
+  <div class="rules">
+    <strong>Hai 15 minuti per fare BINGO</strong>
+    Completa 5 caselle in orizzontale, verticale o diagonale. Ogni nome può essere usato una sola volta.
+    Non puoi fare due domande consecutive alla stessa persona.
+  </div>
+
+  <div class="grid-wrap">
+    <div id="grid" class="grid"></div>
+  </div>
+
+  <section id="entry" class="panel" aria-live="polite">
+    <div class="small">Hai trovato qualcuno?</div>
+    <h2 id="question" style="font-size:1.1rem;margin:.25rem 0 .5rem"></h2>
+    <form id="form">
+      <label>Nome del compagno/a
+        <input id="name" autocomplete="off" placeholder="Scrivi il nome">
+      </label>
+      <label id="detailWrap">Scopri qualcosa in più
+        <input id="detail" placeholder="">
+      </label>
+      <div id="warning" class="warning"></div>
+      <div class="actions">
+        <button class="action primary" type="submit">✓ Segna la casella</button>
+        <button class="action" type="button" id="cancel">Annulla</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="winner" class="win">
+    <div style="font-size:2rem">🎉</div>
+    <h2 style="margin:.25rem 0">BINGO!</h2>
+    <p>Hai completato una fila. Vai da un peer educator per la verifica.</p>
+  </section>
+
+  <div class="footer-actions">
+    <button id="reset" type="button" class="action">↻ Ricomincia</button>
+  </div>
+
+  <p class="small" style="margin-top:14px">La compilazione resta sul dispositivo dello studente. Nessun nome viene inviato o salvato online.</p>
+</main>
+
+<script>
+const items=[
+['🎵','Ascolta musica praticamente ogni giorno','Qual è l’ultima canzone ascoltata?'],
+['🌍','È già stato/a fuori dall’Europa','Dove?'],
+['🐾','Ha un animale domestico','Come si chiama?'],
+['🎮','Ha fatto almeno una Victory Royale su Fortnite','Quante ne ha fatte?'],
+['👟','Pratica uno sport','Quale?'],
+['🌙','Preferisce fare tardi piuttosto che alzarsi presto',''],
+['🎸','Sa suonare uno strumento','Quale?'],
+['🎬','Ha visto il film Odissea al cinema','Gli è piaciuto?'],
+['🍳','Sa cucinare almeno un piatto da solo/a','Quale piatto?'],
+['✈️','Vorrebbe vivere all’estero per un periodo','Dove?'],
+['🎤','È già stato/a a un concerto','Di chi?'],
+['🤖','Ha fatto all’AI una domanda davvero strana o divertente','Che cosa ha chiesto?'],
+['⭐','Ha un talento nascosto','Quale?'],
+['📱','Ha pubblicato un meme o un video che ha superato 1.000 visualizzazioni','Che cosa aveva pubblicato?'],
+['🌎','Parla o capisce almeno tre lingue','Quali?'],
+['🎵','Ha scritto una canzone','Di cosa parlava?'],
+['👤','È figlio/a unico/a',''],
+['😂','Sa raccontare una barzelletta che fa ridere','Fattela raccontare!'],
+['📍','Viene da un paese distante almeno 20 km dalla scuola','Da dove viene?'],
+['🧦','Oggi indossa calzini bianchi',''],
+['🌊','Non ama il mare','Perché?'],
+['🎶','Conosce una canzone quasi tutta a memoria','Quale?'],
+['💪','Ha fatto qualcosa che richiedeva molto coraggio','Che cosa?'],
+['🔤','Ha un nome che inizia per V, I, U o T',''],
+['👶','Da piccolo/a voleva fare il/la professore/ssa, calciatore/trice o addestratore/trice di animali','Che cosa voleva fare?']
+];
+
+let values = [];
+try { values = JSON.parse(localStorage.getItem('bingoUmanoV1') || '[]'); } catch(e) {}
+if (!Array.isArray(values) || values.length !== 25) values = Array(25).fill(null);
+
+let active=-1;
+const grid=document.getElementById('grid');
+const entry=document.getElementById('entry');
+const question=document.getElementById('question');
+const nameInput=document.getElementById('name');
+const detail=document.getElementById('detail');
+const detailWrap=document.getElementById('detailWrap');
+const warning=document.getElementById('warning');
+const counter=document.getElementById('counter');
+const winner=document.getElementById('winner');
+
+function save(){ localStorage.setItem('bingoUmanoV1', JSON.stringify(values)); }
+
+function render(){
+  grid.innerHTML='';
+  items.forEach((it,i)=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='cell'+(values[i]?' done':'');
+    const emoji=document.createElement('div'); emoji.className='emoji'; emoji.textContent=it[0];
+    const p=document.createElement('div'); p.className='prompt'; p.textContent=it[1];
+    const n=document.createElement('div'); n.className='name'; n.textContent=values[i]?'✓ '+values[i].name:'Tocca';
+    const top=document.createElement('div'); top.append(emoji,p);
+    b.append(top,n);
+    b.addEventListener('click',()=>openCell(i));
+    grid.appendChild(b);
+  });
+  counter.textContent=values.filter(Boolean).length;
+  checkBingo();
+}
+
+function openCell(i){
+  active=i;
+  question.textContent=items[i][0]+' '+items[i][1];
+  nameInput.value=values[i]?.name||'';
+  detail.value=values[i]?.detail||'';
+  detailWrap.style.display=items[i][2]?'block':'none';
+  if(items[i][2]) detail.placeholder=items[i][2];
+  warning.textContent='';
+  entry.classList.add('open');
+  nameInput.focus();
+}
+
+function checkBingo(){
+  const lines=[];
+  for(let r=0;r<5;r++) lines.push([0,1,2,3,4].map(c=>r*5+c));
+  for(let c=0;c<5;c++) lines.push([0,1,2,3,4].map(r=>r*5+c));
+  lines.push([0,6,12,18,24],[4,8,12,16,20]);
+  winner.classList.toggle('show',lines.some(line=>line.every(i=>values[i])));
+}
+
+document.getElementById('form').addEventListener('submit',e=>{
+  e.preventDefault();
+  const n=nameInput.value.trim(), d=detail.value.trim();
+  if(!n){warning.textContent='Inserisci prima il nome.';return;}
+  if(values.some((v,i)=>i!==active&&v&&v.name.toLowerCase()===n.toLowerCase())){
+    warning.textContent='⚠️ Questo nome è già presente. Devi trovare un’altra persona!';
+    return;
+  }
+  if(items[active][2]&&!d){
+    warning.textContent='Prima chiedi anche: '+items[active][2];
+    return;
+  }
+  values[active]={name:n,detail:d};
+  save();
+  entry.classList.remove('open');
+  render();
+});
+
+document.getElementById('cancel').addEventListener('click',()=>entry.classList.remove('open'));
+document.getElementById('reset').addEventListener('click',()=>{
+  if(confirm('Vuoi cancellare tutta la tua griglia e ricominciare?')){
+    values=Array(25).fill(null); save(); entry.classList.remove('open'); render();
+  }
+});
+render();
+</script>
+</body>
+</html>
